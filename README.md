@@ -1,3 +1,6 @@
+需要设置token
+git remote set-url origin https://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@github.com/Kamoex/facefusion-service.git
+
 FaceFusion
 ==========
 
