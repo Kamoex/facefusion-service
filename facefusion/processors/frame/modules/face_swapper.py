@@ -162,6 +162,8 @@ def apply_args(program : ArgumentParser) -> None:
         facefusion.globals.face_recognizer_model = 'arcface_simswap'
     if args.face_swapper_model == 'uniface_256':
         facefusion.globals.face_recognizer_model = 'arcface_uniface'
+    logger.info(f'face_swapper->apply_args->face_swapper_model: {frame_processors_globals.face_swapper_model}')
+    logger.info(f'face_swapper->apply_args->face_recognizer_model: {facefusion.globals.face_recognizer_model}')
 
 
 def pre_check() -> bool:
@@ -329,6 +331,8 @@ def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload]
 
     for queue_payload in queue_payloads:
         target_vision_path = queue_payload['frame_path']
+        output_path = queue_payload['output_path']
+            
         target_vision_frame = read_image(target_vision_path)
         result_frame = process_frame(
         {
@@ -336,7 +340,10 @@ def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload]
             'source_face': source_face,
             'target_vision_frame': target_vision_frame
         })
-        write_image(target_vision_path, result_frame)
+        if len(output_path) > 0:
+            write_image(output_path, result_frame)
+        else:
+            write_image(target_vision_path, result_frame)
         update_progress()
 
 
@@ -354,5 +361,5 @@ def process_image(source_paths : List[str], target_path : str, output_path : str
     write_image(output_path, result_frame)
 
 
-def process_video(source_paths : List[str], temp_frame_paths : List[str]) -> None:
-    frame_processors.multi_process_frames(source_paths, temp_frame_paths, process_frames)
+def process_video(source_paths : List[str], temp_frame_paths : List[str], output_paths : List[str]) -> None:
+    frame_processors.multi_process_frames(source_paths, temp_frame_paths, output_paths, process_frames)

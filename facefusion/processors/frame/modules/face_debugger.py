@@ -5,7 +5,7 @@ import numpy
 
 import facefusion.globals
 import facefusion.processors.frame.core as frame_processors
-from facefusion import config, wording
+from facefusion import config, wording, logger
 from facefusion.face_analyser import get_one_face, get_many_faces, find_similar_faces, clear_face_analyser
 from facefusion.face_masker import create_static_box_mask, create_occlusion_mask, create_region_mask, clear_face_occluder, clear_face_parser
 from facefusion.face_helper import warp_face_by_face_landmark_5, categorize_age, categorize_gender
@@ -42,6 +42,7 @@ def register_args(program : ArgumentParser) -> None:
 def apply_args(program : ArgumentParser) -> None:
     args = program.parse_args()
     frame_processors_globals.face_debugger_items = args.face_debugger_items
+    logger.info(f'face_debugger->apply_args->face_debugger_items: {frame_processors_globals.face_debugger_items}')
 
 
 def pre_check() -> bool:
@@ -173,5 +174,5 @@ def process_image(source_paths : List[str], target_path : str, output_path : str
     write_image(output_path, result_frame)
 
 
-def process_video(source_paths : List[str], temp_frame_paths : List[str]) -> None:
-    frame_processors.multi_process_frames(source_paths, temp_frame_paths, process_frames)
+def process_video(source_paths : List[str], temp_frame_paths : List[str], output_paths : List[str]) -> None:
+    frame_processors.multi_process_frames(source_paths, temp_frame_paths, output_paths, process_frames)

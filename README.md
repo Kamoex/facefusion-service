@@ -107,3 +107,74 @@ Documentation
 -------------
 
 Read the [documentation](https://docs.facefusion.io) for a deep dive.
+
+
+options:
+-h, --help：显示帮助信息并退出程序。
+-s SOURCE_PATHS, --source：选择单个或多个源图像或音频。
+-t TARGET_PATH, --target：选择单个目标图像或视频。
+-o OUTPUT_PATH, --output：指定输出文件或目录。
+-v, --version：显示程序的版本号并退出。
+
+misc:
+--skip-download：省略自动下载和远程查找。
+--headless：在没有用户界面的情况下运行程序。
+--log-level：调整在终端显示的消息严重性。
+
+execution:
+--execution-providers：使用不同的提供者加速模型推理。
+--execution-thread-count：指定并行处理时的线程数量。
+--execution-queue-count：指定每个线程处理的帧数量。
+
+memory:
+--video-memory-strategy：平衡快速帧处理和低vram使用。
+--system-memory-limit：限制处理时可使用的ram。
+
+face analyser:
+--face-analyser-order：指定面部分析器检测面部的顺序。
+--face-analyser-age：根据年龄过滤检测到的面部。
+--face-analyser-gender：根据性别过滤检测到的面部。
+--face-detector-model：选择负责检测面部的模型。
+--face-detector-size：指定提供给面部检测器的帧的大小。
+--face-detector-score：根据置信度分数过滤检测到的面部。
+
+face selector:
+--face-selector-mode：使用基于参考的跟踪与简单匹配。
+--reference-face-position：指定用于创建参考面部的位置。
+--reference-face-distance：指定参考面部和目标面部之间的期望相似性。
+--reference-frame-number：指定用于创建参考面部的帧。
+
+face mask:
+--face-mask-types：混合和匹配不同的面部遮罩类型。
+--face-mask-blur：指定应用于盒子遮罩的模糊程度。
+--face-mask-padding：应用于盒子遮罩的顶部、右侧、底部和左侧填充。
+--face-mask-regions：选择用于区域遮罩的面部特征。
+
+frame extraction:
+--trim-frame-start：指定目标视频的开始帧。
+--trim-frame-end：指定目标视频的结束帧。
+--temp-frame-format：指定临时资源格式。
+--temp-frame-quality：指定临时资源质量。
+--keep-temp：处理后保留临时资源。
+
+output creation:
+--output-image-quality：指定图像质量，这将转化为压缩因子。
+--output-video-encoder：指定用于视频压缩的编码器。
+--output-video-preset：平衡快速视频处理和视频文件大小。
+--output-video-quality：指定视频质量，这将转化为压缩因子。
+--output-video-resolution：根据目标视频指定视频输出分辨率。
+--output-video-fps：根据目标视频指定视频输出帧率。
+--skip-audio：省略目标视频的音频。
+
+frame processors:
+--frame-processors：加载单个或多个帧处理器。
+--face-debugger-items：加载单个或多个帧处理器。
+--face-enhancer-model：选择负责增强面部的模型。
+--face-enhancer-blend：将增强的面部融入到之前的面部。
+--face-swapper-model：选择负责交换面部的模型。
+--frame-enhancer-model：选择负责增强帧的模型。
+--frame-enhancer-blend：将增强的帧融入到之前的帧。
+--lip-syncer-model：选择负责同步嘴唇的模型。
+
+uis:
+--ui-layouts：启动单个或多个UI布局。

@@ -46,7 +46,8 @@ Resolution = Tuple[int, int]
 QueuePayload = TypedDict('QueuePayload',
 {
     'frame_number' : int,
-    'frame_path' : str
+    'frame_path' : str,
+    'output_path' : str
 })
 Update_Process = Callable[[], None]
 Process_Frames = Callable[[List[str], List[QueuePayload], Update_Process], None]

@@ -100,6 +100,8 @@ def apply_args(program : ArgumentParser) -> None:
     args = program.parse_args()
     frame_processors_globals.frame_enhancer_model = args.frame_enhancer_model
     frame_processors_globals.frame_enhancer_blend = args.frame_enhancer_blend
+    logger.info(f'frame_enhancer->apply_args->frame_enhancer_model: {frame_processors_globals.frame_enhancer_model}')
+    logger.info(f'frame_enhancer->apply_args->frame_enhancer_blend: {frame_processors_globals.frame_enhancer_blend}')
 
 
 def pre_check() -> bool:
@@ -182,5 +184,5 @@ def process_image(source_paths : List[str], target_path : str, output_path : str
     write_image(output_path, result_frame)
 
 
-def process_video(source_paths : List[str], temp_frame_paths : List[str]) -> None:
-    frame_processors.multi_process_frames(None, temp_frame_paths, process_frames)
+def process_video(source_paths : List[str], temp_frame_paths : List[str], output_paths : List[str]) -> None:
+    frame_processors.multi_process_frames(None, temp_frame_paths, output_paths, process_frames)

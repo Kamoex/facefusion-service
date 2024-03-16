@@ -1,6 +1,9 @@
 from typing import Optional, List, Tuple
 from functools import lru_cache
+import base64
 import cv2
+import numpy as np
+import logging
 
 from facefusion.typing import VisionFrame, Resolution
 from facefusion.choices import video_template_sizes
@@ -124,8 +127,9 @@ def read_image(image_path : str) -> Optional[VisionFrame]:
         return cv2.imread(image_path)
     return None
 
-
 def write_image(image_path : str, frame : VisionFrame) -> bool:
     if image_path:
         return cv2.imwrite(image_path, frame)
     return False
+
+

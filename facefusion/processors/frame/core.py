@@ -35,6 +35,7 @@ FRAME_PROCESSORS_METHODS =\
 
 def load_frame_processor_module(frame_processor : str) -> Any:
     try:
+        logger.info(f"load_frame_processor_module: {frame_processor}")
         frame_processor_module = importlib.import_module('facefusion.processors.frame.modules.' + frame_processor)
         for method_name in FRAME_PROCESSORS_METHODS:
             if not hasattr(frame_processor_module, method_name):
@@ -67,8 +68,8 @@ def clear_frame_processors_modules() -> None:
     FRAME_PROCESSORS_MODULES = []
 
 
-def multi_process_frames(source_paths : List[str], temp_frame_paths : List[str], process_frames : Process_Frames) -> None:
-    queue_payloads = create_queue_payloads(temp_frame_paths)
+def multi_process_frames(source_paths : List[str], temp_frame_paths : List[str], output_paths : List[str], process_frames : Process_Frames) -> None:
+    queue_payloads = create_queue_payloads(temp_frame_paths, output_paths)
     with tqdm(total = len(queue_payloads), desc = wording.get('processing'), unit = 'frame', ascii = ' =', disable = facefusion.globals.log_level in [ 'warn', 'error' ]) as progress:
         progress.set_postfix(
         {
@@ -101,16 +102,25 @@ def pick_queue(queue : Queue[QueuePayload], queue_per_future : int) -> List[Queu
             queues.append(queue.get())
     return queues
 
-
-def create_queue_payloads(temp_frame_paths : List[str]) -> List[QueuePayload]:
+def create_queue_payloads(temp_frame_paths : List[str], output_paths : List[str]) -> List[QueuePayload]:
     queue_payloads = []
     temp_frame_paths = sorted(temp_frame_paths, key = os.path.basename)
-
-    for frame_number, frame_path in enumerate(temp_frame_paths):
-        frame_payload : QueuePayload =\
-        {
-            'frame_number' : frame_number,
-            'frame_path' : frame_path
-        }
-        queue_payloads.append(frame_payload)
+    if len(output_paths) > 0:
+        for frame_number, (frame_path, output_path) in enumerate(zip(temp_frame_paths, output_paths)):
+            frame_payload : QueuePayload =\
+            {
+                'frame_number' : frame_number,
+                'frame_path' : frame_path,
+                'output_path' : output_path
+            }
+            queue_payloads.append(frame_payload)
+    else:
+        for frame_number, frame_path in enumerate(temp_frame_paths):
+            frame_payload : QueuePayload =\
+            {
+                'frame_number' : frame_number,
+                'frame_path' : frame_path,
+                'output_path' : ''
+            }
+            queue_payloads.append(frame_payload)
     return queue_payloads

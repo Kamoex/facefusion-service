@@ -11,6 +11,7 @@ import numpy
 import onnxruntime
 from time import sleep
 from argparse import ArgumentParser, HelpFormatter
+from const_define import *
 
 import facefusion.choices
 import facefusion.globals
@@ -103,7 +104,8 @@ def cli() -> None:
     available_ui_layouts = list_directory('facefusion/uis/layouts')
     group_uis = program.add_argument_group('uis')
     group_uis.add_argument('--ui-layouts', help = wording.get('help.ui_layouts').format(choices = ', '.join(available_ui_layouts)), default = config.get_str_list('uis.ui_layouts', 'default'), nargs = '+')
-    run(program)
+    return program
+    # run(program)
 
 
 def apply_args(program : ArgumentParser) -> None:
@@ -172,12 +174,54 @@ def apply_args(program : ArgumentParser) -> None:
         frame_processor_module.apply_args(program)
     # uis
     facefusion.globals.ui_layouts = args.ui_layouts
+    print("-------------------------mod_param_begin--------------------------------")
+    print("source_paths", facefusion.globals.source_paths)
+    print("target_path", facefusion.globals.target_path)
+    print("output_path", facefusion.globals.output_path)
+    print("skip_download", facefusion.globals.skip_download)
+    print("headless", facefusion.globals.headless)
+    print("log_level", facefusion.globals.log_level)
+    print("execution_providers", facefusion.globals.execution_providers)
+    print("execution_thread_count", facefusion.globals.execution_thread_count)
+    print("execution_queue_count", facefusion.globals.execution_queue_count)
+    print("video_memory_strategy", facefusion.globals.video_memory_strategy)
+    print("system_memory_limit", facefusion.globals.system_memory_limit)
+    print("face_analyser_order",facefusion.globals.face_analyser_order)
+    print("face_analyser_age",facefusion.globals.face_analyser_age)
+    print("face_analyser_gender",facefusion.globals.face_analyser_gender)
+    print("face_detector_model",facefusion.globals.face_detector_model)
+    print("face_detector_size",facefusion.globals.face_detector_size)
+    print("face_detector_score",facefusion.globals.face_detector_score)
+    print("face_selector_mode",facefusion.globals.face_selector_mode)
+    print("reference_face_position",facefusion.globals.reference_face_position)
+    print("reference_face_distance",facefusion.globals.reference_face_distance)
+    print("reference_frame_number",facefusion.globals.reference_frame_number)
+    print("face_mask_types",facefusion.globals.face_mask_types)
+    print("face_mask_blur",facefusion.globals.face_mask_blur)
+    print("face_mask_padding",facefusion.globals.face_mask_padding)
+    print("face_mask_regions",facefusion.globals.face_mask_regions)
+    print("trim_frame_start",facefusion.globals.trim_frame_start)
+    print("trim_frame_end",facefusion.globals.trim_frame_end)
+    print("temp_frame_format",facefusion.globals.temp_frame_format)
+    print("temp_frame_quality",facefusion.globals.temp_frame_quality)
+    print("keep_temp",facefusion.globals.keep_temp)
+    print("output_image_quality",facefusion.globals.output_image_quality)
+    print("output_video_encoder",facefusion.globals.output_video_encoder)
+    print("output_video_preset",facefusion.globals.output_video_preset)
+    print("output_video_quality",facefusion.globals.output_video_quality)
+    print("output_video_resolution",facefusion.globals.output_video_resolution)
+    print("output_video_fps",facefusion.globals.output_video_fps)
+    print("skip_audio",facefusion.globals.skip_audio)
+    print("frame_processors",facefusion.globals.frame_processors)
+    print("ui_layouts",facefusion.globals.ui_layouts)
+    print("-------------------------mod_param_end--------------------------------")
 
+    
 
 def run(program : ArgumentParser) -> None:
+    # apply_args(program)
     logger.init(facefusion.globals.log_level)
     logger.info("-------------begin---------------")
-    apply_args(program)
     s = time.time()
     if facefusion.globals.system_memory_limit > 0:
         limit_system_memory(facefusion.globals.system_memory_limit)
@@ -246,6 +290,27 @@ def conditional_process() -> None:
         logger.info(f"process_video use time {round(time.time() - s, 2)}s")
         s = time.time()
 
+# def model_process(img, tmplate, choose_type, paths, commpress) -> None:
+def model_process(request_id, choose_type, path_info:path_config):
+    start_time = time.time()
+    s = time.time()
+    conditional_append_reference_faces()
+    logger.info(f"id:{request_id}, conditional_append_reference_faces use time {round(time.time() - s, 2)}s")
+    s = time.time()
+    # 图片换脸
+    if choose_type == E_CHOOSE_IMG:
+        img_res = process_image(request_id, path_info, True)
+        if img_res[CODE] != E_SUCESS[CODE]:
+            return img_res
+        logger.info(f"request_id:{request_id}, process_image use time {round(time.time() - s, 2)}s")
+        s = time.time()
+    else:
+        video_res = process_video_new(request_id, path_info)
+        if video_res[CODE] != E_SUCESS[CODE]:
+            return video_res
+        logger.info(f"request_id:{request_id}, process_video use time {round(time.time() - s, 2)}s")
+    return E_SUCESS
+
 
 def conditional_append_reference_faces() -> None:
     if 'reference' in facefusion.globals.face_selector_mode and not get_reference_faces():
@@ -265,27 +330,29 @@ def conditional_append_reference_faces() -> None:
                     reference_face = get_one_face(reference_frame, facefusion.globals.reference_face_position)
                     append_reference_face(frame_processor_module.__name__, reference_face)
 
-
-def process_image(start_time : float) -> None:
-    if analyse_image(facefusion.globals.target_path):
-        return
-    shutil.copy2(facefusion.globals.target_path, facefusion.globals.output_path)
-    # process frame
-    for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
-        logger.info(wording.get('processing'), frame_processor_module.NAME)
-        frame_processor_module.process_image(facefusion.globals.source_paths, facefusion.globals.output_path, facefusion.globals.output_path)
-        frame_processor_module.post_process()
-    # compress image
-    if compress_image(facefusion.globals.output_path):
-        logger.info(wording.get('compressing_image_succeed'), __name__.upper())
-    else:
-        logger.warn(wording.get('compressing_image_skipped'), __name__.upper())
-    # validate image
-    if is_image(facefusion.globals.output_path):
-        seconds = '{:.2f}'.format((time.time() - start_time) % 60)
-        logger.info(wording.get('processing_image_succeed').format(seconds = seconds), __name__.upper())
-    else:
-        logger.error(wording.get('processing_image_failed'), __name__.upper())
+# path : user_path, template_path, output_path
+def process_image(task_id, path_info:path_config, commpress):
+    try:
+        s = time.time()
+        shutil.copy2(path_info.template_img_path, path_info.output_img_path)
+        # process frame
+        for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
+            logger.info(f"id: {task_id}, {wording.get('processing')} {frame_processor_module.NAME}")
+            frame_processor_module.process_image(path_info.user_path_list, path_info.output_img_path, path_info.output_img_path)
+            frame_processor_module.post_process()
+        # compress image
+        if commpress:
+            ok, msg = compress_image(path_info.output_img_path)
+            if not ok:
+                logger.error(f"id: {task_id}, compress image error: {msg}")
+            else:
+                logger.info(f"id: {task_id}, {wording.get('compressing_image_succeed')}")
+    except Exception as e:
+        logger.error(f"id: {task_id}, process img exception: " + str(e))
+        return E_PROCESS_IMG_EXCEPTION
+    seconds = '{:.2f}'.format((time.time() - s))
+    logger.info(f"id: {task_id}, process img use time {seconds}s")
+    return E_SUCESS
 
 
 def process_video(start_time : float) -> None:
@@ -310,7 +377,7 @@ def process_video(start_time : float) -> None:
     if temp_frame_paths:
         for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
             logger.info(wording.get('processing'), frame_processor_module.NAME)
-            frame_processor_module.process_video(facefusion.globals.source_paths, temp_frame_paths)
+            frame_processor_module.process_video(facefusion.globals.source_paths, temp_frame_paths, [])
             frame_processor_module.post_process()
     else:
         logger.error(wording.get('temp_frames_not_found'), __name__.upper())
@@ -354,3 +421,63 @@ def process_video(start_time : float) -> None:
         logger.info(wording.get('processing_video_succeed').format(seconds = seconds), __name__.upper())
     else:
         logger.error(wording.get('processing_video_failed'), __name__.upper())
+
+def process_video_new(task_id, path_info:path_config):
+    start_time = time.time()
+    s = time.time()
+    if not os.listdir(path_info.template_frame_path):
+        logger.info(f"id: {task_id}, " + wording.get('extracting_frames_fps').format(video_fps = facefusion.globals.output_video_fps))
+        extract_frames(path_info.template_video_path, path_info.template_frame_path, facefusion.globals.output_video_resolution, facefusion.globals.output_video_fps)
+        logger.info(f"id: {task_id}, extract_frames use time {round(time.time() - s, 2)}s")
+        s = time.time()
+    # process frame
+    temp_frame_paths = get_temp_frame_paths(path_info.template_video_path, path_info.template_frame_path)
+    if temp_frame_paths:
+        output_frame_paths = []
+        output_dir_name = os.path.dirname(path_info.output_video_path)
+        for temp_frame_path in temp_frame_paths:
+            output_frame_paths.append(output_dir_name + '/' + os.path.basename(temp_frame_path))
+        for frame_processor_module in get_frame_processors_modules(facefusion.globals.frame_processors):
+            logger.info(wording.get('processing'), frame_processor_module.NAME)
+            frame_processor_module.process_video(path_info.user_path_list, temp_frame_paths, output_frame_paths)
+            frame_processor_module.post_process()
+    else:
+        logger.error(f'id: {task_id}, ' + wording.get('temp_frames_not_found'))
+        return E_NOT_FIND_TEMPLATE_FRAMES
+    logger.info(f"id: {task_id}, process frame use time {round(time.time() - s, 2)}s")
+    s = time.time()
+    # merge video
+    logger.info(f"id: {task_id}, " + wording.get('merging_video_fps').format(video_fps = facefusion.globals.output_video_fps))
+    merge_ok, merge_msg = merge_video(path_info.template_frame_path, path_info.output_video_no_audio_path, facefusion.globals.output_video_resolution, facefusion.globals.output_video_fps)
+    if not merge_ok:
+        logger.error(f"id: {task_id}, merge_video error: {merge_msg}")
+        return E_MERGE_VIDEO_ERR
+    logger.info(f"id: {task_id}, merge video use time {round(time.time() - s, 2)}s")
+    s = time.time()
+    # handle audio
+    if facefusion.globals.skip_audio:
+        logger.info("id: {task_id}, skip audio")
+    else:
+        # lip_syncer 视频替换视频处理 暂时不考虑
+        if 'lip_syncer' in facefusion.globals.frame_processors:
+            source_audio_path = get_first(filter_audio_paths(path_info.user_path_list))
+            if source_audio_path and replace_audio(path_info.template_video_path, source_audio_path, path_info.output_video_path):
+                logger.info(f"id: {task_id}, replace audio succeed use time {round(time.time() - s, 2)}")
+            else:
+                logger.error(f"id: {task_id}, replace audio error")
+        else:
+            audio_ok, audio_msg = restore_audio(path_info.template_video_path, path_info.output_video_no_audio_path, path_info.output_video_path, facefusion.globals.output_video_fps)
+            if not audio_ok:
+                logger.error(f"id: {task_id}, restore audio error: {audio_msg}")
+            else:
+                logger.info(f"id: {task_id}, restore audio succeed use time {round(time.time() - s, 2)}s")
+    s = time.time()
+    # validate video
+    if not is_video(path_info.output_video_path):
+        logger.error(f"id: {task_id}, processing video failed")
+        return E_PROCESS_VIDEO_ERR
+    # 清理用户frame目录
+    os.rmdir(path_info.output_frame_path)
+    seconds = '{:.2f}'.format((time.time() - start_time))
+    logger.info(f"id: {task_id}, processing video succeed use time {seconds}s")
+    return E_SUCESS

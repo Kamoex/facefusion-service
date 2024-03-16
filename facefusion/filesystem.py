@@ -12,19 +12,21 @@ TEMP_DIRECTORY_PATH = os.path.join(tempfile.gettempdir(), 'facefusion')
 TEMP_OUTPUT_VIDEO_NAME = 'temp.mp4'
 
 
-def get_temp_frame_paths(target_path : str) -> List[str]:
-    temp_frames_pattern = get_temp_frames_pattern(target_path, '*')
+def get_temp_frame_paths(target_path : str, tmp_dir = '') -> List[str]:
+    temp_frames_pattern = get_temp_frames_pattern(target_path, '*', tmp_dir)
     return sorted(glob.glob(temp_frames_pattern))
 
-
-def get_temp_frames_pattern(target_path : str, temp_frame_prefix : str) -> str:
-    temp_directory_path = get_temp_directory_path(target_path)
+def get_temp_frames_pattern(target_path : str, temp_frame_prefix : str, tmp_dir = '') -> str:
+    temp_directory_path = get_temp_directory_path(target_path, tmp_dir)
     return os.path.join(temp_directory_path, temp_frame_prefix + '.' + facefusion.globals.temp_frame_format)
 
 
-def get_temp_directory_path(target_path : str) -> str:
+def get_temp_directory_path(target_path : str, temp_dir = '') -> str:
     target_name, _ = os.path.splitext(os.path.basename(target_path))
-    return os.path.join(TEMP_DIRECTORY_PATH, target_name)
+    if len(temp_dir) == 0:
+        return os.path.join(TEMP_DIRECTORY_PATH, target_name)
+    else:
+        return temp_dir
 
 
 def get_temp_output_video_path(target_path : str) -> str:
@@ -35,7 +37,6 @@ def get_temp_output_video_path(target_path : str) -> str:
 def create_temp(target_path : str) -> None:
     temp_directory_path = get_temp_directory_path(target_path)
     Path(temp_directory_path).mkdir(parents = True, exist_ok = True)
-
 
 def move_temp(target_path : str, output_path : str) -> None:
     temp_output_video_path = get_temp_output_video_path(target_path)
