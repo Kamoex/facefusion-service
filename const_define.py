@@ -4,10 +4,10 @@ from typing import List, Optional, Any, Literal, Callable, Tuple, Dict, TypedDic
 from facefusion.typing import LogLevel, VideoMemoryStrategy, FaceSelectorMode, FaceAnalyserOrder, FaceAnalyserAge, FaceAnalyserGender, FaceMaskType, FaceMaskRegion, OutputVideoEncoder, OutputVideoPreset, FaceDetectorModel, FaceRecognizerModel, TempFrameFormat, Padding
 
 # 请求参数
-REQ_UUID  = "uuid"
-REQ_IMG64 = "img_base64"
-REQ_TEMPLATE = "req_template"
-REQ_TYPE = "req_type"
+# REQ_UUID  = "uuid"
+# REQ_IMG64 = "img_base64"
+# REQ_TEMPLATE = "req_template"
+# REQ_TYPE = "req_type"
 
 # 常量定义
 # E_CHOOSE_IMG = "img"
@@ -15,6 +15,7 @@ REQ_TYPE = "req_type"
 E_USER_IMG_PATH = os.getcwd() + "/user_imgs"
 E_TEMPLATE_PATH = os.getcwd() + "/templates"
 E_OUTPUT_PATH = os.getcwd() + "/out_put"
+E_COS_FILE_KEY = "face-swap/"
 
 # 常量定义new
 E_CHOOSE_IMG = 1
@@ -22,8 +23,22 @@ E_CHOOSE_VIDEO = 2
 
 E_STATUS_TO_IMG = 1 # 照片待处理
 E_STATUS_TO_VIDEO = 2 # 视频待处理
-E_STATUS_SUCCEEDED = 3 # 处理成功
-E_STATUS_ERROR = 4 # 处理异常
+E_STATUS_PROCESSING = 3 # 处理中
+E_STATUS_SUCCEEDED = 4 # 处理成功
+E_STATUS_ERROR = 5 # 处理异常
+
+# MYSQL配置
+MYSQL_HOST = os.getenv("MYSQL_HOST")
+MYSQL_PROT = os.getenv("MYSQL_PROT")
+MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
+MYSQL_USR = os.getenv("MYSQL_USR")
+MYSQL_PWD = os.getenv("MYSQL_PWD")
+MYSQL_TAB = os.getenv("MYSQL_TAB")
+
+# cos配置
+COS_ID = os.getenv("COS_ID")
+COS_KEY = os.getenv("COS_KEY")
+BUCKET_NAME = os.getenv("BUCKET_NAME")
 
 # 错误码
 CODE = "code"
@@ -33,7 +48,7 @@ E_BODY_NOT_JSON = {CODE:1001, MSG:"body is not json"}
 E_REQ_UUID_ERR = {CODE:1002, MSG:"param uuid err"}
 E_REQ_IMG64_ERR = {CODE:1003, MSG:"param img_base64 err"}
 E_REQ_TEMPLATE_ERR = {CODE:1003, MSG:"param template err"}
-E_REQ_TYPE_ERR = {CODE:1003, MSG:"param type err"}
+E_CHOOSE_TYPE_ERR = {CODE:1003, MSG:"choose type err"}
 E_READ_IMG64_ERR = {CODE:1003, MSG:"read img_base64 err"}
 E_SAVE_IMG_ERR = {CODE:1004, MSG:"save img err"}
 E_USER_IMG_PATH_ERR = {CODE:1005, MSG:"user img path err"}
@@ -47,6 +62,7 @@ E_MERGE_VIDEO_ERR = {CODE:1010, MSG:"merge video err"}
 E_PROCESS_VIDEO_ERR = {CODE:1010, MSG:"process video err"}
 E_PROCESS_IMG_EXCEPTION = {CODE:1010, MSG:"process img exception"}
 E_PROCESS_VIDEO_EXCEPTION = {CODE:1010, MSG:"process video exception"}
+E_COS_UPLOAD_ERROR = {CODE:1010, MSG:"cos updload error"}
 E_EXCEPTION_ERR = {CODE:9999, MSG:"exception err"}
 
 class path_config:

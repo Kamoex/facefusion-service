@@ -42,27 +42,29 @@ class my_service:
         core.apply_args(program)
     
     def run(self):
-        self.handle_photo()
-        logging.info("handle task begin")
+        while True:
+            self.handle_photo()
+            self.handle_viedo()
+            time.sleep(2)
        
-        if photo_task is not None:
-            # 获取路径信息
-            path_info = path_config(photo_task.id, photo_task.template_name)
-        logging.info(f"request_id:{body[REQ_UUID]}, path init ok")
-        # 保存用户照片
-        cv2.imwrite(path_info.user_path_list[0], self._user_cv_img)
-        logging.info(f"request_id:{body[REQ_UUID]}, save user img ok")
-        # 检查路径
-        verify_res = self.verify_path(body[REQ_UUID], body[REQ_TYPE], path_info)
-        if verify_res[CODE] != E_SUCESS[CODE]:
-            return verify_res
-        logging.info(f"request_id:{body[REQ_UUID]}, verify path ok")
-        # 模型处理
-        process_res = core.model_process(body[REQ_UUID], body[REQ_TYPE], path_info)
-        if process_res[CODE] != E_SUCESS[CODE]:
-            return process_res
-        logging.info(f"request_id:{body[REQ_UUID]}, post_handle end")
-        return E_SUCESS
+        # if photo_task is not None:
+        #     # 获取路径信息
+        #     path_info = path_config(photo_task.id, photo_task.template_name)
+        # logging.info(f"request_id:{body[REQ_UUID]}, path init ok")
+        # # 保存用户照片
+        # cv2.imwrite(path_info.user_path_list[0], self._user_cv_img)
+        # logging.info(f"request_id:{body[REQ_UUID]}, save user img ok")
+        # # 检查路径
+        # verify_res = self.verify_path(body[REQ_UUID], body[REQ_TYPE], path_info)
+        # if verify_res[CODE] != E_SUCESS[CODE]:
+        #     return verify_res
+        # logging.info(f"request_id:{body[REQ_UUID]}, verify path ok")
+        # # 模型处理
+        # process_res = core.model_process(body[REQ_UUID], body[REQ_TYPE], path_info)
+        # if process_res[CODE] != E_SUCESS[CODE]:
+        #     return process_res
+        # logging.info(f"request_id:{body[REQ_UUID]}, post_handle end")
+        # return E_SUCESS
     
     def handle_photo(self):
         try:
@@ -80,7 +82,7 @@ class my_service:
                 if user_cv_img is None:
                     logging.error(f"[photo-processing] id:{task.id} read_img_base64 error!")
                     task.set_status(E_STATUS_ERROR, E_READ_IMG64_ERR)
-                    mysql_tools.update_task(task)
+                    mysql_tools.update_img_task(task)
                     continue
                 logging.info(f"[photo-processing] id:{task.id}, read_img_base64 ok")
                 # 获取路径信息
@@ -98,14 +100,14 @@ class my_service:
                 process_res = core.process_image(task.id, path_info, True)
                 if process_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, process_res)
-                    mysql_tools.update_task(task)
+                    mysql_tools.update_img_task(task)
                     continue
                 logging.info(f"[photo-processing] id:{task.id}, process_image ok")
                 # 上传cos
-                img_url, upload_res = cos_tools.upload_img(path_info.output_img_path)
+                img_url, upload_res = cos_tools.upload_file_to_cos(task.id, path_info.output_img_path, E_CHOOSE_IMG)
                 if upload_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, upload_res)
-                    mysql_tools.update_task(task)
+                    mysql_tools.update_img_task(task)
                     continue
                 if task.choose_type == E_CHOOSE_IMG:
                     task.status = E_STATUS_SUCCEEDED
@@ -115,7 +117,7 @@ class my_service:
                 task.img_use_time = round(time.time() - start_time, 2)
                 task.img_wait_time = round(time.time() - task.create_time, 2)
                 # 更新db
-                mysql_tools.update_task(task)
+                mysql_tools.update_img_task(task)
                 # 清除用户缓存
                 if task.choose_type == E_CHOOSE_IMG and len(path_info.user_path_list) > 0:
                     os.rmdir(path_info.user_path_list[0])
@@ -149,20 +151,20 @@ class my_service:
                 process_res = core.process_video_new(task.id, path_info)
                 if process_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, process_res)
-                    mysql_tools.update_task(task)
+                    mysql_tools.update_video_task(task)
                 logging.info(f"[video-processing] id:{task.id}, process_video_new ok")
                 # todo 上传cos
-                video_url, upload_res = cos_tools.upload_img(path_info.output_video_path)
+                video_url, upload_res = cos_tools.upload_file_to_cos(task.id, path_info.output_video_path, E_CHOOSE_VIDEO)
                 if upload_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, upload_res)
-                    mysql_tools.update_task(task)
+                    mysql_tools.update_video_task(task)
                     continue
                 # 更新db
                 task.status = E_SUCESS
                 task.fin_video_url = video_url
                 task.video_use_time = round(time.time() - start_time, 2)
                 task.video_wait_time = round(time.time() - task.create_time, 2)
-                mysql_tools.update_task(task)
+                mysql_tools.update_video_task(task)
                 # 清除用户缓存
                 if len(path_info.user_path_list) > 0:
                     os.rmdir(path_info.user_path_list[0])
@@ -172,65 +174,63 @@ class my_service:
             trace_info(e)
 
 
-
-    def post_handle(self, body):
-        try:
-            logging.info("post_handle begin")
-            # 检测参数
-            verify_res = self.verify_params(body) 
-            if verify_res[CODE] != E_SUCESS[CODE]:
-                return verify_res
-            logging.info(f"request_id:{body[REQ_UUID]}, verify params ok")
-            # 获取路径信息
-            path_info = path_config(body[REQ_UUID], body[REQ_TEMPLATE])
-            logging.info(f"request_id:{body[REQ_UUID]}, path init ok")
-            # 保存用户照片
-            cv2.imwrite(path_info.user_path_list[0], self._user_cv_img)
-            logging.info(f"request_id:{body[REQ_UUID]}, save user img ok")
-            # 检查路径
-            verify_res = self.verify_path(body[REQ_UUID], body[REQ_TYPE], path_info)
-            if verify_res[CODE] != E_SUCESS[CODE]:
-                return verify_res
-            logging.info(f"request_id:{body[REQ_UUID]}, verify path ok")
-            # 模型处理
-            process_res = core.model_process(body[REQ_UUID], body[REQ_TYPE], path_info)
-            if process_res[CODE] != E_SUCESS[CODE]:
-                return process_res
-            logging.info(f"request_id:{body[REQ_UUID]}, post_handle end")
-            return E_SUCESS
-        except Exception as e:
-            trace_info(e)
+    # def post_handle(self, body):
+    #     try:
+    #         logging.info("post_handle begin")
+    #         # 检测参数
+    #         verify_res = self.verify_params(body) 
+    #         if verify_res[CODE] != E_SUCESS[CODE]:
+    #             return verify_res
+    #         logging.info(f"request_id:{body[REQ_UUID]}, verify params ok")
+    #         # 获取路径信息
+    #         path_info = path_config(body[REQ_UUID], body[REQ_TEMPLATE])
+    #         logging.info(f"request_id:{body[REQ_UUID]}, path init ok")
+    #         # 保存用户照片
+    #         cv2.imwrite(path_info.user_path_list[0], self._user_cv_img)
+    #         logging.info(f"request_id:{body[REQ_UUID]}, save user img ok")
+    #         # 检查路径
+    #         verify_res = self.verify_path(body[REQ_UUID], body[REQ_TYPE], path_info)
+    #         if verify_res[CODE] != E_SUCESS[CODE]:
+    #             return verify_res
+    #         logging.info(f"request_id:{body[REQ_UUID]}, verify path ok")
+    #         # 模型处理
+    #         process_res = core.model_process(body[REQ_UUID], body[REQ_TYPE], path_info)
+    #         if process_res[CODE] != E_SUCESS[CODE]:
+    #             return process_res
+    #         logging.info(f"request_id:{body[REQ_UUID]}, post_handle end")
+    #         return E_SUCESS
+    #     except Exception as e:
+    #         trace_info(e)
     
-    # 检查请求参数
-    def verify_params(self, body):
-        if not isinstance(body, dict):
-            return E_BODY_NOT_JSON
-        if REQ_UUID not in body or not isinstance(body[REQ_UUID], str) or body[REQ_UUID] == '':
-            return E_REQ_UUID_ERR
-        if REQ_IMG64 not in body or not isinstance(body[REQ_IMG64], str) or body[REQ_IMG64] == '':
-            return E_REQ_IMG64_ERR
-        if REQ_TEMPLATE not in body or not isinstance(body[REQ_TEMPLATE], str) or body[REQ_TEMPLATE] == '':
-            return E_REQ_TEMPLATE_ERR
-        if REQ_TYPE not in body or not isinstance(body[REQ_TYPE], str) or body[REQ_TYPE] == '':
-            return E_REQ_TYPE_ERR
-        self._user_cv_img = read_img_base64(body[REQ_IMG64])
-        if self._user_cv_img is None:
-            return E_READ_IMG64_ERR 
-        
-        return E_SUCESS
+    # # 检查请求参数
+    # def verify_params(self, body):
+    #     if not isinstance(body, dict):
+    #         return E_BODY_NOT_JSON
+    #     if REQ_UUID not in body or not isinstance(body[REQ_UUID], str) or body[REQ_UUID] == '':
+    #         return E_REQ_UUID_ERR
+    #     if REQ_IMG64 not in body or not isinstance(body[REQ_IMG64], str) or body[REQ_IMG64] == '':
+    #         return E_REQ_IMG64_ERR
+    #     if REQ_TEMPLATE not in body or not isinstance(body[REQ_TEMPLATE], str) or body[REQ_TEMPLATE] == '':
+    #         return E_REQ_TEMPLATE_ERR
+    #     if REQ_TYPE not in body or not isinstance(body[REQ_TYPE], str) or body[REQ_TYPE] == '':
+    #         return E_CHOOSE_TYPE_ERR
+    #     self._user_cv_img = read_img_base64(body[REQ_IMG64])
+    #     if self._user_cv_img is None:
+    #         return E_READ_IMG64_ERR 
+    #     return E_SUCESS
     
-    # 前处理
-    def pre_process(self, body) -> path_config:
-        try:
-            path = path_config(body[REQ_UUID], body[REQ_TEMPLATE])
-            if path is None:
-                return None
-            # 保存图片
-            cv2.imwrite(path.user_path_list[0], self._user_cv_img)
-            return path
-        except Exception as e:
-            logging.error("save_img error: ", str(e))
-            return None
+    # # 前处理
+    # def pre_process(self, body) -> path_config:
+    #     try:
+    #         path = path_config(body[REQ_UUID], body[REQ_TEMPLATE])
+    #         if path is None:
+    #             return None
+    #         # 保存图片
+    #         cv2.imwrite(path.user_path_list[0], self._user_cv_img)
+    #         return path
+    #     except Exception as e:
+    #         logging.error("save_img error: ", str(e))
+    #         return None
     
     # 检查路径
     def verify_path(self, request_id, req_type, path_info: path_config):
@@ -249,7 +249,7 @@ class my_service:
             logger.error(f"request_id: {request_id}, verify_path exception! " + str(e))
             return E_EXCEPTION_ERR
 
-
-
-# def  function():
-    # core.cli()
+if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)
+    service = my_service()
+    service.run()
