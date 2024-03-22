@@ -217,7 +217,7 @@ def post_process() -> None:
         clear_face_parser()
 
 
-def swap_face(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
+def swap_face(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame, source_img_path) -> VisionFrame:
     model_template = get_options('model').get('template')
     model_size = get_options('model').get('size')
     crop_vision_frame, affine_matrix = warp_face_by_face_landmark_5(temp_vision_frame, target_face.landmark['5/68'], model_template, model_size)
@@ -230,7 +230,7 @@ def swap_face(source_face : Face, target_face : Face, temp_vision_frame : Vision
         occlusion_mask = create_occlusion_mask(crop_vision_frame)
         crop_mask_list.append(occlusion_mask)
     crop_vision_frame = prepare_crop_frame(crop_vision_frame)
-    crop_vision_frame = apply_swap(source_face, crop_vision_frame)
+    crop_vision_frame = apply_swap(source_face, crop_vision_frame, source_img_path)
     crop_vision_frame = normalize_crop_frame(crop_vision_frame)
     if 'region' in facefusion.globals.face_mask_types:
         region_mask = create_region_mask(crop_vision_frame, facefusion.globals.face_mask_regions)
@@ -240,7 +240,7 @@ def swap_face(source_face : Face, target_face : Face, temp_vision_frame : Vision
     return temp_vision_frame
 
 
-def apply_swap(source_face : Face, crop_vision_frame : VisionFrame) -> VisionFrame:
+def apply_swap(source_face : Face, crop_vision_frame : VisionFrame, source_img_path) -> VisionFrame:
     frame_processor = get_frame_processor()
     model_type = get_options('model').get('type')
     frame_processor_inputs = {}
@@ -248,7 +248,7 @@ def apply_swap(source_face : Face, crop_vision_frame : VisionFrame) -> VisionFra
     for frame_processor_input in frame_processor.get_inputs():
         if frame_processor_input.name == 'source':
             if model_type == 'blendswap' or model_type == 'uniface':
-                frame_processor_inputs[frame_processor_input.name] = prepare_source_frame(source_face)
+                frame_processor_inputs[frame_processor_input.name] = prepare_source_frame(source_face, source_img_path)
             else:
                 frame_processor_inputs[frame_processor_input.name] = prepare_source_embedding(source_face)
         if frame_processor_input.name == 'target':
@@ -257,9 +257,10 @@ def apply_swap(source_face : Face, crop_vision_frame : VisionFrame) -> VisionFra
     return crop_vision_frame
 
 
-def prepare_source_frame(source_face : Face) -> VisionFrame:
+def prepare_source_frame(source_face : Face, source_img_path) -> VisionFrame:
     model_type = get_options('model').get('type')
-    source_vision_frame = read_static_image(facefusion.globals.source_paths[0])
+    # source_vision_frame = read_static_image(facefusion.globals.source_paths[0])
+    source_vision_frame = read_static_image(source_img_path)
     if model_type == 'blendswap':
         source_vision_frame, _ = warp_face_by_face_landmark_5(source_vision_frame, source_face.landmark['5/68'], 'arcface_112_v2', (112, 112))
     if model_type == 'uniface':
@@ -298,11 +299,11 @@ def normalize_crop_frame(crop_vision_frame : VisionFrame) -> VisionFrame:
     return crop_vision_frame
 
 
-def get_reference_frame(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
-    return swap_face(source_face, target_face, temp_vision_frame)
+def get_reference_frame(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame, source_img_path = "") -> VisionFrame:
+    return swap_face(source_face, target_face, temp_vision_frame, source_img_path)
 
 
-def process_frame(inputs : FaceSwapperInputs) -> VisionFrame:
+def process_frame(inputs : FaceSwapperInputs, source_img_path) -> VisionFrame:
     reference_faces = inputs['reference_faces']
     source_face = inputs['source_face']
     target_vision_frame = inputs['target_vision_frame']
@@ -311,16 +312,16 @@ def process_frame(inputs : FaceSwapperInputs) -> VisionFrame:
         similar_faces = find_similar_faces(reference_faces, target_vision_frame, facefusion.globals.reference_face_distance)
         if similar_faces:
             for similar_face in similar_faces:
-                target_vision_frame = swap_face(source_face, similar_face, target_vision_frame)
+                target_vision_frame = swap_face(source_face, similar_face, target_vision_frame, source_img_path)
     if 'one' in facefusion.globals.face_selector_mode:
         target_face = get_one_face(target_vision_frame)
         if target_face:
-            target_vision_frame = swap_face(source_face, target_face, target_vision_frame)
+            target_vision_frame = swap_face(source_face, target_face, target_vision_frame, source_img_path)
     if 'many' in facefusion.globals.face_selector_mode:
         many_faces = get_many_faces(target_vision_frame)
         if many_faces:
             for target_face in many_faces:
-                target_vision_frame = swap_face(source_face, target_face, target_vision_frame)
+                target_vision_frame = swap_face(source_face, target_face, target_vision_frame, source_img_path)
     return target_vision_frame
 
 
@@ -339,7 +340,7 @@ def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload]
             'reference_faces': reference_faces,
             'source_face': source_face,
             'target_vision_frame': target_vision_frame
-        })
+        }, source_paths[0])
         if len(output_path) > 0:
             write_image(output_path, result_frame)
         else:
@@ -357,7 +358,7 @@ def process_image(source_paths : List[str], target_path : str, output_path : str
         'reference_faces': reference_faces,
         'source_face': source_face,
         'target_vision_frame': target_vision_frame
-    })
+    }, source_paths[0])
     write_image(output_path, result_frame)
 
 

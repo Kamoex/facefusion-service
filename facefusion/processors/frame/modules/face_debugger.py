@@ -123,11 +123,11 @@ def debug_face(target_face : Face, temp_vision_frame : VisionFrame) -> VisionFra
     return temp_vision_frame
 
 
-def get_reference_frame(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
+def get_reference_frame(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame, source_img_path = "") -> VisionFrame:
     pass
 
 
-def process_frame(inputs : FaceDebuggerInputs) -> VisionFrame:
+def process_frame(inputs : FaceDebuggerInputs, source_img_path='') -> VisionFrame:
     reference_faces = inputs['reference_faces']
     target_vision_frame = inputs['target_vision_frame']
 
@@ -158,7 +158,7 @@ def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload]
         {
             'reference_faces': reference_faces,
             'target_vision_frame': target_vision_frame
-        })
+        }, source_paths[0])
         write_image(target_vision_path, result_frame)
         update_progress()
 
@@ -170,7 +170,7 @@ def process_image(source_paths : List[str], target_path : str, output_path : str
     {
         'reference_faces': reference_faces,
         'target_vision_frame': target_vision_frame
-    })
+    }, source_paths[0])
     write_image(output_path, result_frame)
 
 

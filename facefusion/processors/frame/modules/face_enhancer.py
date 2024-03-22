@@ -227,11 +227,11 @@ def blend_frame(temp_vision_frame : VisionFrame, paste_vision_frame : VisionFram
     return temp_vision_frame
 
 
-def get_reference_frame(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame) -> VisionFrame:
+def get_reference_frame(source_face : Face, target_face : Face, temp_vision_frame : VisionFrame, source_img_path = "") -> VisionFrame:
     return enhance_face(target_face, temp_vision_frame)
 
 
-def process_frame(inputs : FaceEnhancerInputs) -> VisionFrame:
+def process_frame(inputs : FaceEnhancerInputs, source_img_path='') -> VisionFrame:
     reference_faces = inputs['reference_faces']
     target_vision_frame = inputs['target_vision_frame']
 
@@ -252,7 +252,7 @@ def process_frame(inputs : FaceEnhancerInputs) -> VisionFrame:
     return target_vision_frame
 
 
-def process_frames(source_path : List[str], queue_payloads : List[QueuePayload], update_progress : Update_Process) -> None:
+def process_frames(source_paths : List[str], queue_payloads : List[QueuePayload], update_progress : Update_Process) -> None:
     reference_faces = get_reference_faces() if 'reference' in facefusion.globals.face_selector_mode else None
 
     for queue_payload in queue_payloads:
@@ -262,21 +262,21 @@ def process_frames(source_path : List[str], queue_payloads : List[QueuePayload],
         {
             'reference_faces': reference_faces,
             'target_vision_frame': target_vision_frame
-        })
+        }, source_paths[0])
         write_image(target_vision_path, result_frame)
         update_progress()
 
 
-def process_image(source_path : str, target_path : str, output_path : str) -> None:
+def process_image(source_paths : str, target_path : str, output_path : str) -> None:
     reference_faces = get_reference_faces() if 'reference' in facefusion.globals.face_selector_mode else None
     target_vision_frame = read_static_image(target_path)
     result_frame = process_frame(
     {
         'reference_faces': reference_faces,
         'target_vision_frame': target_vision_frame
-    })
+    }, source_paths[0])
     write_image(output_path, result_frame)
 
 
 def process_video(source_paths : List[str], temp_frame_paths : List[str], output_paths : List[str]) -> None:
-    frame_processors.multi_process_frames(None, temp_frame_paths, output_paths, process_frames)
+    frame_processors.multi_process_frames(source_paths, temp_frame_paths, output_paths, process_frames)

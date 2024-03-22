@@ -1,25 +1,22 @@
+from const_define import *
 from facefusion import core
-from facefusion.processors.frame.core import load_frame_processor_module
-from facefusion.execution_helper import encode_execution_providers, decode_execution_providers
 from facefusion import logger
-from argparse import ArgumentParser
+from facefusion.processors.frame.core import get_frame_processors_modules
 import facefusion.globals
 import mysql_tools
 import cos_tools
-from const_define import *
-import json
 import traceback
 import logging
 import cv2
 import base64
 import numpy as np
 import time
+import shutil
 
 def trace_info(e):
     logging.error("================================DEBUG_BEGIN================================")
     logging.error(traceback.format_exc())
     logging.error("================================DEBUG_END==================================")
-    logging.error("run error: " + str(e))
 
 
 def read_img_base64(base64_image: str):
@@ -40,9 +37,12 @@ class my_service:
         # 初始化参数和模型
         program = core.cli()
         core.apply_args(program)
+        
     
     def run(self):
         while True:
+            self.handle_template(E_TEMPLATE_ADD)
+            self.handle_template(E_TEMPLATE_DEL)
             self.handle_photo()
             self.handle_viedo()
             time.sleep(2)
@@ -66,9 +66,51 @@ class my_service:
         # logging.info(f"request_id:{body[REQ_UUID]}, post_handle end")
         # return E_SUCESS
     
+    def handle_template(self, status):
+        template = mysql_tools.get_flag_template(status)
+        if template is None:
+            return
+        try:
+            # 新增模板
+            if template.status == E_TEMPLATE_ADD:
+                if len(template.video_path) > 0 and (cos_tools.download_file(template.video_file_key, template.video_path) == False):
+                    template.set_status(E_TEMPLATE_ERROR, E_COS_VIDEO_DOWNLOAD_ERROR)
+                    logging.error(f"[handle_template] id:{template.id}, cos video download error")
+                    mysql_tools.update_template_task(template)
+                    return
+                if len(template.video_path) == 0 or (cos_tools.download_file(template.img_file_key, template.img_path) == False):
+                    template.set_status(E_TEMPLATE_ERROR, E_COS_IMG_DOWNLOAD_ERROR)
+                    logging.error(f"[handle_template] id:{template.id}, cos img download error")
+                    mysql_tools.update_template_task(template)
+                    return
+                # 检查视频路径
+                if not os.path.exists(template.video_path):
+                    template.set_status(E_TEMPLATE_ERROR, E_TEMPLATE_VIDEO_PATH_ERR)
+                    logging.error(f"[handle_template] id:{template.id}, video path not exists")
+                    mysql_tools.update_template_task(template)
+                    return
+                # 检查图片路径
+                if not os.path.exists(template.img_path):
+                    template.set_status(E_TEMPLATE_ERROR, E_TEMPLATE_IMG_PATH_ERR)
+                    logging.error(f"[handle_template] id:{template.id}, img path not exists")
+                    mysql_tools.update_template_task(template)
+                    return
+                template.set_status(E_TEMPLATE_ADDED, E_SUCESS)
+            # 删除模板
+            elif template.status == E_TEMPLATE_DEL:
+                if os.path.exists(template.get_dir()):
+                    shutil.rmtree(template.get_dir())
+                template.set_status(E_TEMPLATE_DELED, E_SUCESS)
+            mysql_tools.update_template_task(template)
+        except Exception as e:
+            logging.error(f"[handle_template] id:{template.id}, exception: {str(e)}")
+            template.set_status(E_TEMPLATE_ERROR, E_PROCESS_TEMPLATE_EXCEPTION)
+            template.msg += " [exception]: " + traceback.format_exc()
+            mysql_tools.update_template_task(template)
+    
     def handle_photo(self):
         try:
-            task:img_task_info 
+            task:img_task_info = None 
             while True:
                 start_time = time.time()
                 # 获取待处理照片任务
@@ -78,16 +120,17 @@ class my_service:
                     break
                 logging.info(f"[photo-processing] id:{task}, process begin")
                 # 保存用户照片
-                user_cv_img = read_img_base64(task.face)
-                if user_cv_img is None:
-                    logging.error(f"[photo-processing] id:{task.id} read_img_base64 error!")
-                    task.set_status(E_STATUS_ERROR, E_READ_IMG64_ERR)
-                    mysql_tools.update_img_task(task)
-                    continue
-                logging.info(f"[photo-processing] id:{task.id}, read_img_base64 ok")
+                # user_cv_img = read_img_base64(task.face)
+                # if user_cv_img is None:
+                #     logging.error(f"[photo-processing] id:{task.id} read_img_base64 error!")
+                #     task.set_status(E_STATUS_ERROR, E_READ_IMG64_ERR)
+                #     mysql_tools.update_img_task(task)
+                #     continue
+                # logging.info(f"[photo-processing] id:{task.id}, read_img_base64 ok")
                 # 获取路径信息
                 path_info = path_config(task.id, task.template_name)
-                cv2.imwrite(path_info.user_path_list[0], self._user_cv_img)
+                cos_tools.download_file(task.user_img_file_key, path_info.user_path_list[0])
+                # cv2.imwrite(path_info.user_path_list[0], self._user_cv_img)
                 logging.info(f"[photo-processing] id:{task.id}, save photo ok")
                 # 检查路径
                 verify_res = self.verify_path(task.id, task.choose_type, path_info)
@@ -120,11 +163,15 @@ class my_service:
                 mysql_tools.update_img_task(task)
                 # 清除用户缓存
                 if task.choose_type == E_CHOOSE_IMG and len(path_info.user_path_list) > 0:
-                    os.rmdir(path_info.user_path_list[0])
-                os.rmdir(path_info.output_img_path)
+                    os.remove(path_info.user_path_list[0])
+                os.remove(path_info.output_img_path)
                 logging.info(f"[photo-processing] id:{task.id}, clear cache ok")
                 logging.info(f"[photo-processing] id:{task.id}, process end total use time {round(time.time() - start_time, 2)}s")
         except Exception as e:
+            if task is not None:
+                task.set_status(E_STATUS_ERROR, E_PROCESS_IMG_EXCEPTION)
+                task.msg += " [exception]: " + traceback.format_exc()
+                mysql_tools.update_img_task(task)
             trace_info(e)
     
     def handle_viedo(self):
@@ -144,6 +191,7 @@ class my_service:
                 verify_res = self.verify_path(task.id, task.choose_type, path_info)
                 if verify_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, verify_res)
+                    mysql_tools.update_video_task(task)
                     logging.error(f"[video-processing] id:{task.id} verify_path error!")
                     continue
                 logging.info(f"[video-processing] id:{task.id}, verify path ok")
@@ -152,6 +200,7 @@ class my_service:
                 if process_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, process_res)
                     mysql_tools.update_video_task(task)
+                    continue
                 logging.info(f"[video-processing] id:{task.id}, process_video_new ok")
                 # todo 上传cos
                 video_url, upload_res = cos_tools.upload_file_to_cos(task.id, path_info.output_video_path, E_CHOOSE_VIDEO)
@@ -160,17 +209,21 @@ class my_service:
                     mysql_tools.update_video_task(task)
                     continue
                 # 更新db
-                task.status = E_SUCESS
+                task.status = E_STATUS_SUCCEEDED
                 task.fin_video_url = video_url
                 task.video_use_time = round(time.time() - start_time, 2)
                 task.video_wait_time = round(time.time() - task.create_time, 2)
                 mysql_tools.update_video_task(task)
                 # 清除用户缓存
                 if len(path_info.user_path_list) > 0:
-                    os.rmdir(path_info.user_path_list[0])
-                os.rmdir(path_info.output_path)
+                    os.remove(path_info.user_path_list[0])
+                shutil.rmtree(path_info.output_path)
                 logger.info(f"[video-processing] id:{task.id}, process end total use time {round(time.time() - start_time, 2)}s")
         except Exception as e:
+            if task is not None:
+                task.set_status(E_STATUS_ERROR, E_PROCESS_VIDEO_EXCEPTION)
+                task.msg += " [exception]: " + traceback.format_exc()
+                mysql_tools.update_video_task(task)
             trace_info(e)
 
 
@@ -251,5 +304,9 @@ class my_service:
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
+    # with open("/opt/face-test/img/likui.jpeg", 'rb') as f:
+    #     img_bytes = f.read()
+    # base64_str = base64.b64encode(img_bytes).decode()
+    # print(base64_str)
     service = my_service()
     service.run()

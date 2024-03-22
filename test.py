@@ -31,6 +31,18 @@ test_post()
 # 视频检查 可以放在模板更新的时候检查
 # if analyse_video(path_info.template_video_path, facefusion.globals.trim_frame_start, facefusion.globals.trim_frame_end):
 #         return
+# l
 
 
-#测试提交
+# docker cp 1c04ec3a848b:/opt/facefusion-service/const_define.py .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/facefusion.ini .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/mysql_tools.py .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/requirements.txt .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/cos_tools.py .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/install.py .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/run.py .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/test.py .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/facefusion .
+# docker cp 1c04ec3a848b:/opt/facefusion-service/service.py .
+
+
