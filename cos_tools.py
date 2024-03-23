@@ -1,5 +1,6 @@
 
 import sys
+import time
 import os
 import hashlib
 import logging
@@ -8,6 +9,7 @@ from qcloud_cos import CosS3Client
 from qcloud_cos import CosServiceError
 from qcloud_cos import CosClientError
 from qcloud_cos.cos_threadpool import SimpleThreadPool
+from qcloud_cos.cos_exception import CosServiceError
 from const_define import *
 
 
@@ -54,23 +56,27 @@ def upload_file_to_cos(task_id, file_path, choose_type):
     return url, E_SUCESS
 
 def download_file(file_key, output_path):
-
-    # -*- coding=utf-8
-    # 正常情况日志级别使用 INFO，需要定位时可以修改为 DEBUG，此时 SDK 会打印和服务端的通信信息
-    region = 'ap-nanjing'      # 替换为用户的 region，已创建桶归属的 region 可以在控制台查看，https://console.cloud.tencent.com/cos5/bucket
-    token = None               # 如果使用永久密钥不需要填入 token，如果使用临时密钥需要填入，临时密钥生成和使用指引参见 https://cloud.tencent.com/document/product/436/14048
-    scheme = 'https'           # 指定使用 http/https 协议来访问 COS，默认为 https，可不填
-    config = CosConfig(Region=region, SecretId=COS_ID, SecretKey=COS_KEY, Token=token, Scheme=scheme)
-    client = CosS3Client(config)
-    response = client.get_object(
-        Bucket=BUCKET_NAME,
-        Key=file_key
-    )
-    output_dir = os.path.dirname(output_path)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    response['Body'].get_stream_to_file(output_path)
-
+    try:
+        # -*- coding=utf-8
+        # 正常情况日志级别使用 INFO，需要定位时可以修改为 DEBUG，此时 SDK 会打印和服务端的通信信息
+        region = 'ap-nanjing'      # 替换为用户的 region，已创建桶归属的 region 可以在控制台查看，https://console.cloud.tencent.com/cos5/bucket
+        token = None               # 如果使用永久密钥不需要填入 token，如果使用临时密钥需要填入，临时密钥生成和使用指引参见 https://cloud.tencent.com/document/product/436/14048
+        scheme = 'https'           # 指定使用 http/https 协议来访问 COS，默认为 https，可不填
+        config = CosConfig(Region=region, SecretId=COS_ID, SecretKey=COS_KEY, Token=token, Scheme=scheme)
+        client = CosS3Client(config)
+        response = client.get_object(
+            Bucket=BUCKET_NAME,
+            Key=file_key
+        )
+        output_dir = os.path.dirname(output_path)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        response['Body'].get_stream_to_file(output_path)
+    except CosServiceError as e:
+        err_msg = "code: " + str(e.get_error_code()) + ", message: " + e.get_error_msg() + ", resource: " + e.get_resource_location()
+        raise ValueError(err_msg)
+    except Exception as e:
+        raise ValueError(str(e))
 
 # upload_file_to_cos("templates/test", "/opt/facefusion-service/templates/AnimateDiff_00049/AnimateDiff_00049.mp4", E_CHOOSE_VIDEO)
 # upload_file_to_cos("templates/test", "/opt/facefusion-service/templates/AnimateDiff_00049/AnimateDiff_00049.jpg", E_CHOOSE_IMG)

@@ -10,6 +10,7 @@ import warnings
 import shutil
 import numpy
 import onnxruntime
+import multiprocessing
 from time import sleep
 from argparse import ArgumentParser, HelpFormatter
 from const_define import *
@@ -120,9 +121,12 @@ def apply_args(program : ArgumentParser) -> None:
     facefusion.globals.headless = args.headless
     facefusion.globals.log_level = args.log_level
     # execution
-    facefusion.globals.execution_providers = decode_execution_providers(args.execution_providers)
-    facefusion.globals.execution_thread_count = args.execution_thread_count
-    facefusion.globals.execution_queue_count = args.execution_queue_count
+    # facefusion.globals.execution_providers = decode_execution_providers(args.execution_providers)
+    facefusion.globals.execution_providers = [ 'CUDAExecutionProvider' ]
+    # facefusion.globals.execution_thread_count = args.execution_thread_count
+    facefusion.globals.execution_thread_count = multiprocessing.cpu_count() * 2
+    # facefusion.globals.execution_queue_count = args.execution_queue_count
+    facefusion.globals.execution_queue_count = 32
     # memory
     facefusion.globals.video_memory_strategy = args.video_memory_strategy
     facefusion.globals.system_memory_limit = args.system_memory_limit

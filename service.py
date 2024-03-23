@@ -105,7 +105,7 @@ class my_service:
         except Exception as e:
             logging.error(f"[handle_template] id:{template.id}, exception: {str(e)}")
             template.set_status(E_TEMPLATE_ERROR, E_PROCESS_TEMPLATE_EXCEPTION)
-            template.msg += " [exception]: " + traceback.format_exc()
+            template.msg += " [exception]: " + str(e)
             mysql_tools.update_template_task(template)
     
     def handle_photo(self):
@@ -170,7 +170,7 @@ class my_service:
         except Exception as e:
             if task is not None:
                 task.set_status(E_STATUS_ERROR, E_PROCESS_IMG_EXCEPTION)
-                task.msg += " [exception]: " + traceback.format_exc()
+                task.msg += " [exception]: " + str(e)
                 mysql_tools.update_img_task(task)
             trace_info(e)
     
@@ -202,7 +202,7 @@ class my_service:
                     mysql_tools.update_video_task(task)
                     continue
                 logging.info(f"[video-processing] id:{task.id}, process_video_new ok")
-                # todo 上传cos
+                # 上传cos
                 video_url, upload_res = cos_tools.upload_file_to_cos(task.id, path_info.output_video_path, E_CHOOSE_VIDEO)
                 if upload_res[CODE] != E_SUCESS[CODE]:
                     task.set_status(E_STATUS_ERROR, upload_res)
@@ -222,7 +222,7 @@ class my_service:
         except Exception as e:
             if task is not None:
                 task.set_status(E_STATUS_ERROR, E_PROCESS_VIDEO_EXCEPTION)
-                task.msg += " [exception]: " + traceback.format_exc()
+                task.msg += " [exception]: " + str(e)
                 mysql_tools.update_video_task(task)
             trace_info(e)
 
