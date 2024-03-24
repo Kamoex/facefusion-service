@@ -78,6 +78,6 @@ def download_file(file_key, output_path):
     except Exception as e:
         raise ValueError(str(e))
 
-# upload_file_to_cos("templates/test", "/opt/facefusion-service/templates/AnimateDiff_00049/AnimateDiff_00049.mp4", E_CHOOSE_VIDEO)
-# upload_file_to_cos("templates/test", "/opt/facefusion-service/templates/AnimateDiff_00049/AnimateDiff_00049.jpg", E_CHOOSE_IMG)
+# upload_file_to_cos("test", "test_template.jpg", E_CHOOSE_VIDEO)
+# upload_file_to_cos("test", "test_template.mp4", E_CHOOSE_IMG)
 # download_file("face-swap/53231323/bd8d57c8f62825b3ef195e66b28b4b63.jpg", "/tmp/test.jpg")

@@ -21,7 +21,7 @@ def get_photo_task() -> img_task_info:
     cursor = None
     task = None
     try:
-        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, charset='utf8')
+        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
         conn.begin()
         cmd = f"SELECT id, choose_type, template_name, face, status, UNIX_TIMESTAMP(create_time) FROM Orders WHERE status = {E_STATUS_TO_IMG} LIMIT 1 FOR UPDATE"
@@ -58,7 +58,7 @@ def get_video_task() -> video_task_info:
     cursor = None
     task = None
     try:
-        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, charset='utf8')
+        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
         conn.begin()
         cmd = f"SELECT id, choose_type, template_name, status, UNIX_TIMESTAMP(create_time) FROM Orders WHERE status = {E_STATUS_TO_VIDEO} LIMIT 1 FOR UPDATE"
@@ -90,7 +90,7 @@ def update_img_task(task:img_task_info):
     cursor = None
     cmd = ""
     try:
-        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, charset='utf8')
+        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
         cmd = f"UPDATE Orders SET status={task.status},code={task.code},msg='{task.msg}',fin_img_url='{task.fin_img_url}',img_use_time={task.img_use_time},img_wait_time={task.img_wait_time}  WHERE id={task.id}"
         cursor.execute(cmd)
@@ -107,7 +107,7 @@ def update_video_task(task:video_task_info):
     cursor = None
     cmd = ""
     try:
-        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, charset='utf8')
+        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
         cmd = f"UPDATE Orders SET status={task.status},code={task.code},msg='{task.msg}',fin_video_url='{task.fin_video_url}',video_use_time={task.video_use_time},video_wait_time={task.video_wait_time}  WHERE id={task.id}"
         cursor.execute(cmd)
@@ -124,7 +124,7 @@ def get_flag_template(flag) -> template_info:
     cursor = None
     task = None
     try:
-        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, charset='utf8')
+        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
         conn.begin()
         cmd = f"SELECT id, name, status, img_url, video_url FROM Templates WHERE status = {flag} LIMIT 1 FOR UPDATE"
@@ -165,7 +165,7 @@ def update_template_task(task:template_info):
     cursor = None
     cmd = ""
     try:
-        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, charset='utf8')
+        conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
         cmd = f"UPDATE Templates SET status={task.status},code={task.code},msg='{task.msg}' WHERE id={task.id}"
         cursor.execute(cmd)

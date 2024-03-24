@@ -15,7 +15,7 @@ from facefusion.typing import LogLevel, VideoMemoryStrategy, FaceSelectorMode, F
 E_USER_IMG_PATH = os.getcwd() + "/user_imgs"
 E_TEMPLATE_PATH = os.getcwd() + "/templates"
 E_OUTPUT_PATH = os.getcwd() + "/out_put"
-E_COS_FILE_KEY = "face-swap/"
+E_COS_FILE_KEY = "out_put/"
 
 # 套餐定义
 E_CHOOSE_IMG = 1
@@ -35,11 +35,11 @@ E_TEMPLATE_PROCESSING = 5 # 处理中
 E_TEMPLATE_ERROR = 6 # 处理异常
 
 # MYSQL配置
-MYSQL_HOST = os.getenv("MYSQL_HOST")
-MYSQL_PROT = os.getenv("MYSQL_PROT")
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE")
-MYSQL_USR = os.getenv("MYSQL_USR")
-MYSQL_PWD = os.getenv("MYSQL_PWD")
+MYSQL_HOST      = "sh-cynosdbmysql-grp-k2p5yn90.sql.tencentcdb.com"
+MYSQL_PROT      = 20342
+MYSQL_DATABASE  = "facefusion"
+MYSQL_USR       = "root"
+MYSQL_PWD       = "ubuntu@123G"
 
 # cos配置
 COS_ID = os.getenv("COS_ID")
