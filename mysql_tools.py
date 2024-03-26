@@ -40,6 +40,12 @@ def get_photo_task() -> img_task_info:
                 task.user_img_file_key = img_url_split[1]
             cmd = f"UPDATE Orders SET status = {E_STATUS_PROCESSING} WHERE id = {task.id}"
             cursor.execute(cmd)
+            # 拿到模板url
+            cmd = f"SELECT img_url FROM Templates WHERE name = '{task.template_name}'"
+            cursor.execute(cmd)
+            res = cursor.fetchone()
+            if res is not None:
+                task.fin_img_url = res[0]
         else:
             logging.info("[mysql] no img data need to process")
         conn.commit()
@@ -76,6 +82,13 @@ def get_video_task() -> video_task_info:
         else:
             logging.info("[mysql] no video data need to process")
         conn.commit()
+        # 拿到模板url
+        if task is not None:
+            cmd = f"SELECT video_url FROM Templates WHERE name = '{task.template_name}'"
+            cursor.execute(cmd)
+            res = cursor.fetchone()
+        if res is not None:
+            task.fin_video_url = res[0]
     except Exception as e:
         logging.info("[mysql] get_video_task exception: " + str(e))
         task = None
