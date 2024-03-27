@@ -155,6 +155,7 @@ class img_task_info:
         self.code = E_SUCESS[CODE]
         self.msg = E_SUCESS[MSG]
         self.fin_img_url = ""
+        self.rd_code = ""
         self.img_use_time = 0
         self.img_wait_time = 0
         self.create_time = 0

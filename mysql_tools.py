@@ -40,15 +40,27 @@ def get_photo_task() -> img_task_info:
                 task.user_img_file_key = img_url_split[1]
             cmd = f"UPDATE Orders SET status = {E_STATUS_PROCESSING} WHERE id = {task.id}"
             cursor.execute(cmd)
-            # 拿到模板url
+            # 拿到模板url给task设置上 如果处理失败 默认返回模板
             cmd = f"SELECT img_url FROM Templates WHERE name = '{task.template_name}'"
             cursor.execute(cmd)
             res = cursor.fetchone()
             if res is not None:
                 task.fin_img_url = res[0]
+            
         else:
             logging.info("[mysql] no img data need to process")
         conn.commit()
+        # 拿到4位随机码
+        conn.begin()
+        cmd = f"SELECT rd_code FROM RandomCodes WHERE is_using = 0 limit 1 FOR UPDATE"
+        cursor.execute(cmd)
+        res = cursor.fetchone()
+        if res is not None:
+            task.rd_code = res[0]
+            cmd = f"UPDATE RandomCodes SET is_using = 1 WHERE rd_code='{task.rd_code}'"
+        conn.commit()
+        if len(task.rd_code) == 0:
+            raise ValueError("rd_code is none")
     except Exception as e:
         logging.info("[mysql] get_photo_task exception: " + str(e))
         task = None
@@ -105,7 +117,7 @@ def update_img_task(task:img_task_info):
     try:
         conn = pymysql.connect(host=MYSQL_HOST, user=MYSQL_USR, password=MYSQL_PWD, database=MYSQL_DATABASE, port=MYSQL_PROT, charset='utf8')
         cursor = conn.cursor()
-        cmd = f"UPDATE Orders SET status={task.status},code={task.code},msg='{task.msg}',fin_img_url='{task.fin_img_url}',img_use_time={task.img_use_time},img_wait_time={task.img_wait_time}  WHERE id={task.id}"
+        cmd = f"UPDATE Orders SET status={task.status},code={task.code},msg='{task.msg}',fin_img_url='{task.fin_img_url}',rd_code='{task.rd_code}',img_use_time={task.img_use_time},img_wait_time={task.img_wait_time}  WHERE id={task.id}"
         cursor.execute(cmd)
         conn.commit()
     except Exception as e:
