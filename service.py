@@ -40,12 +40,18 @@ class my_service:
         
     
     def run(self):
+        interval_sec = 5
+        count = 0
         while True:
             self.handle_template(E_TEMPLATE_ADD)
             self.handle_template(E_TEMPLATE_DEL)
             self.handle_photo()
             self.handle_viedo()
-            time.sleep(2)
+            count += 1
+            if count % ((60 * 60) / interval_sec) == 0:
+                mysql_tools.check_rd_code_valid()
+            time.sleep(5)
+
        
         # if photo_task is not None:
         #     # 获取路径信息
